@@ -1,6 +1,6 @@
 import logging
-from typing import List, Dict, Any, Tuple, Optional
-import ollama
+import json
+from typing import List, Dict, Any, Optional
 import httpx
 
 try:
@@ -25,12 +25,17 @@ RULES:
 
 class GenerationService:
     """
-    Service responsible for constructing grounded prompts and querying the local Ollama LLM.
+    Multi-backend generation service.
+    Priority order:
+      1. Google Gemini API  (set GEMINI_API_KEY in backend/.env)
+      2. llama-server / local llama.cpp  (OpenAI-compatible, running on LLAMA_SERVER_URL)
+      3. Context-summary fallback (shows retrieved chunks, no LLM)
     """
     _instance = None
 
     def __init__(self):
-        self.client: Optional[ollama.Client] = None
+        self._gemini_client = None
+        self.backend: str = "fallback"
         self.is_ready: bool = False
 
     @classmethod
@@ -39,51 +44,84 @@ class GenerationService:
             cls._instance = cls()
         return cls._instance
 
+    # ------------------------------------------------------------------
+    # Initialisation
+    # ------------------------------------------------------------------
+
     def initialize(self):
-        """
-        Initializes the Ollama client and tests connectivity.
-        """
+        """Tries each backend in priority order."""
+
+        # 1) Google Gemini
+        if settings.GEMINI_API_KEY:
+            try:
+                from google import genai
+                self._gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
+                self.backend = "gemini"
+                self.is_ready = True
+                logger.info(f"✅ Gemini backend ready (model={settings.GEMINI_MODEL})")
+                return
+            except Exception as e:
+                logger.warning(f"Gemini init failed: {e}")
+
+        # 2) llama-server (OpenAI-compatible, running locally)
         try:
-            logger.info(f"Configuring Ollama client for host: {settings.OLLAMA_HOST}")
-            self.client = ollama.Client(host=settings.OLLAMA_HOST)
-            # Connectivity check
-            self.check_health()
+            with httpx.Client(timeout=5.0) as client:
+                res = client.get(f"{settings.LLAMA_SERVER_URL}/health")
+                if res.status_code in (200, 503):   # 503 = still loading, that's OK
+                    logger.info(f"✅ llama-server backend ready at {settings.LLAMA_SERVER_URL}")
+                    self.backend = "llama_server"
+                    self.is_ready = True
+                    return
         except Exception as e:
-            logger.warning(f"Ollama client initialization warning: {e}")
+            logger.warning(f"llama-server not reachable: {e}")
+
+        # 3) Fallback
+        logger.warning("No LLM backend available — using context-summary fallback.")
+        self.backend = "fallback"
+        self.is_ready = True
+
+    # ------------------------------------------------------------------
+    # Health
+    # ------------------------------------------------------------------
 
     def check_health(self) -> Dict[str, Any]:
-        """
-        Pings the Ollama daemon and checks whether the configured model is available.
-        """
-        try:
-            with httpx.Client(timeout=3.0) as client:
-                res = client.get(f"{settings.OLLAMA_HOST}/api/tags")
-                if res.status_code == 200:
-                    models_data = res.json().get("models", [])
-                    available_models = [m.get("name") for m in models_data]
-                    model_found = any(settings.OLLAMA_MODEL in m for m in available_models)
-                    self.is_ready = True
-                    return {
-                        "status": "connected",
-                        "host": settings.OLLAMA_HOST,
-                        "configured_model": settings.OLLAMA_MODEL,
-                        "model_present": model_found,
-                        "available_models": available_models
-                    }
-        except Exception as e:
-            self.is_ready = False
+        if self.backend == "gemini":
             return {
-                "status": "unreachable",
-                "host": settings.OLLAMA_HOST,
-                "configured_model": settings.OLLAMA_MODEL,
-                "error": str(e)
+                "status": "connected",
+                "backend": "Google Gemini",
+                "configured_model": settings.GEMINI_MODEL,
+                "model_present": True,
+                "available_models": [settings.GEMINI_MODEL],
+                "host": "https://generativelanguage.googleapis.com",
             }
-        return {"status": "unknown"}
+        if self.backend == "llama_server":
+            try:
+                with httpx.Client(timeout=3.0) as client:
+                    res = client.get(f"{settings.LLAMA_SERVER_URL}/health")
+                    healthy = res.status_code == 200
+                return {
+                    "status": "connected" if healthy else "loading",
+                    "backend": "llama-server (local)",
+                    "configured_model": "qwen2.5-1.5b-instruct",
+                    "model_present": True,
+                    "available_models": ["qwen2.5-1.5b-instruct"],
+                    "host": settings.LLAMA_SERVER_URL,
+                }
+            except Exception as e:
+                return {"status": "unreachable", "backend": "llama-server", "error": str(e)}
+        return {
+            "status": "fallback",
+            "backend": "Context-summary (no LLM configured)",
+            "configured_model": "none",
+            "model_present": False,
+            "available_models": [],
+        }
+
+    # ------------------------------------------------------------------
+    # Prompt builder
+    # ------------------------------------------------------------------
 
     def build_prompt(self, question: str, retrieved_chunks: List[Dict[str, Any]]) -> str:
-        """
-        Builds the structured, citation-grounded prompt for the LLM.
-        """
         if not retrieved_chunks:
             return f"Context:\nNo relevant documents found.\n\nQuestion: {question}\nAnswer:"
 
@@ -92,54 +130,94 @@ class GenerationService:
             doc = chunk.get("document", "Unknown")
             page = chunk.get("page", "?")
             content = chunk.get("content", "").strip()
-            context_blocks.append(f"--- [Source {i} | Document: {doc} | Page: {page}] ---\n{content}")
+            context_blocks.append(
+                f"--- [Source {i} | Document: {doc} | Page: {page}] ---\n{content}"
+            )
 
         context_str = "\n\n".join(context_blocks)
+        return (
+            f"Context:\n{context_str}\n\n"
+            f"Question:\n{question}\n\n"
+            f"Answer (grounded strictly in the context above, with citations):"
+        )
 
-        prompt = f"""Context:
-{context_str}
-
-Question:
-{question}
-
-Answer (grounded strictly in the context above, with citations):"""
-        return prompt
+    # ------------------------------------------------------------------
+    # Generation
+    # ------------------------------------------------------------------
 
     def generate_answer(self, question: str, retrieved_chunks: List[Dict[str, Any]]) -> str:
-        """
-        Generates a grounded answer from Ollama using the retrieved chunks.
-        Falls back cleanly if Ollama daemon is unreachable.
-        """
         if not retrieved_chunks:
             return "I could not find this information in the provided documents."
 
         prompt = self.build_prompt(question, retrieved_chunks)
 
-        try:
-            if not self.client:
-                self.client = ollama.Client(host=settings.OLLAMA_HOST)
+        # --- Google Gemini ---
+        if self.backend == "gemini" and self._gemini_client:
+            from google.genai import types
+            config = types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+                temperature=0.1,
+                top_p=0.9,
+                max_output_tokens=1024,
+            )
+            # Try configured model first, then auto-fallback to reliable backup models if 503/rate-limited
+            candidate_models = list(dict.fromkeys([
+                settings.GEMINI_MODEL,
+                "gemini-3.5-flash",
+                "gemini-3.5-flash-lite",
+                "gemini-3.8-flash"
+            ]))
+            for model_name in candidate_models:
+                try:
+                    response = self._gemini_client.models.generate_content(
+                        model=model_name,
+                        contents=prompt,
+                        config=config,
+                    )
+                    if response.text:
+                        return response.text.strip()
+                except Exception as e:
+                    logger.warning(f"Gemini model '{model_name}' call failed: {e}. Attempting next model...")
+            logger.error("All Gemini candidate models failed.")
 
-            response = self.client.generate(
-                model=settings.OLLAMA_MODEL,
-                prompt=prompt,
-                system=SYSTEM_PROMPT,
-                options={
-                    "temperature": 0.1,  # Low temperature for strict factual grounding
-                    "top_p": 0.9
+        # --- llama-server (OpenAI-compatible /v1/chat/completions) ---
+        if self.backend == "llama_server":
+            try:
+                payload = {
+                    "model": "local-model",
+                    "messages": [
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt},
+                    ],
+                    "temperature": 0.1,
+                    "top_p": 0.9,
+                    "max_tokens": 1024,
                 }
-            )
-            return response.get("response", "").strip()
+                with httpx.Client(timeout=120.0) as client:
+                    res = client.post(
+                        f"{settings.LLAMA_SERVER_URL}/v1/chat/completions",
+                        json=payload,
+                        headers={"Content-Type": "application/json"},
+                    )
+                    res.raise_for_status()
+                    data = res.json()
+                    return data["choices"][0]["message"]["content"].strip()
+            except Exception as e:
+                logger.error(f"llama-server generation error: {e}", exc_info=True)
 
-        except Exception as e:
-            logger.error(f"Ollama generation failed: {e}", exc_info=True)
-            # Informative fallback if local Ollama server is offline or model is pulling
-            sources_summary = "\n".join(
-                [f"• [{c.get('document')} - Page {c.get('page')}]: {c.get('content', '')[:150]}..."
-                 for c in retrieved_chunks[:2]]
-            )
-            return (
-                f"[Ollama Service Notice]: Unable to connect to local Ollama LLM at {settings.OLLAMA_HOST} "
-                f"({type(e).__name__}).\n\n"
-                f"Relevant context retrieved from vector store:\n{sources_summary}\n\n"
-                f"To enable full neural synthesis, ensure Ollama is running (`ollama serve`) and model is pulled (`ollama pull {settings.OLLAMA_MODEL}`)."
-            )
+        # --- Context-summary fallback ---
+        sources_summary = "\n".join(
+            [
+                f"• **[{c.get('document')} – Page {c.get('page')}]**: {c.get('content', '')[:250]}..."
+                for c in retrieved_chunks[:3]
+            ]
+        )
+        return (
+            "⚠️ **No LLM backend is active.**\n\n"
+            "**Relevant context retrieved from your documents:**\n\n"
+            f"{sources_summary}\n\n"
+            "---\n"
+            "*To enable full AI answers, either:*\n"
+            "- *Add a `GEMINI_API_KEY` to `backend/.env` (free at https://aistudio.google.com/apikey)*\n"
+            "- *Or ensure `llama-server` is running on port 11434*"
+        )

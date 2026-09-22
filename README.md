@@ -5,10 +5,10 @@
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.32%2B-FF4B4B.svg)](https://streamlit.io/)
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-VectorStore-orange.svg)](https://www.trychroma.com/)
 [![Sentence Transformers](https://img.shields.io/badge/Embeddings-all--MiniLM--L6--v2-green.svg)](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
-[![Ollama](https://img.shields.io/badge/LLM-Ollama%20(llama3.2)-black.svg)](https://ollama.com/)
+[![Google Gemini](https://img.shields.io/badge/LLM-Google%20Gemini-4285F4.svg)](https://ai.google.dev/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
 
-An enterprise-grade, end-to-end **Retrieval-Augmented Generation (RAG) Document Assistant** designed to answer questions strictly grounded in academic and technical document corpora. The system extracts text from PDF documents, splits content into semantically coherent overlapping chunks, generates dense vector embeddings, stores them in a persistent ChromaDB vector database, and synthesizes answers using a local Ollama LLM with verifiable source citations.
+An enterprise-grade, end-to-end **Retrieval-Augmented Generation (RAG) Document Assistant** designed to answer questions strictly grounded in academic and technical document corpora. The system extracts text from PDF documents, splits content into semantically coherent overlapping chunks, generates dense vector embeddings, stores them in a persistent ChromaDB vector database, and synthesizes answers using Google Gemini or local LLM engines with verifiable source citations.
 
 ---
 
@@ -327,10 +327,13 @@ curl -X POST "http://localhost:8000/query" \
 
 | Variable | Default Value | Description |
 | :--- | :--- | :--- |
-| `OLLAMA_HOST` | `http://localhost:11434` | URL of the local Ollama LLM service |
-| `OLLAMA_MODEL` | `llama3.2` | Ollama model identifier to use for generation |
+| `GEMINI_API_KEY` | `""` | Google Gemini API Key (get free at [AI Studio](https://aistudio.google.com/apikey)) |
+| `GEMINI_MODEL` | `gemini-3.6-flash` | Gemini model identifier (supports automatic resilient failover) |
+| `LLAMA_SERVER_URL` | `http://127.0.0.1:11434` | OpenAI-compatible endpoint for local `llama-server` / `llama.cpp` |
+| `OLLAMA_HOST` | `http://localhost:11434` | URL of local Ollama LLM service (optional fallback) |
+| `OLLAMA_MODEL` | `llama3.2` | Ollama model identifier |
 | `OLLAMA_TIMEOUT_SECONDS` | `60.0` | Timeout threshold in seconds for LLM inference |
-| `CHROMA_PATH` | `backend/data/vector_store` | Path to persistent ChromaDB storage directory |
+| `CHROMA_PATH` | `data/vector_store` | Path to persistent ChromaDB storage directory |
 | `CHROMA_COLLECTION_NAME`| `rag_documents` | Collection name in ChromaDB |
 | `EMBEDDING_MODEL_NAME` | `all-MiniLM-L6-v2` | SentenceTransformer embedding model identifier |
 | `TOP_K` | `4` | Number of document chunks retrieved per query |

@@ -88,16 +88,18 @@ with st.sidebar:
         components = data.get("components", {})
         vs_info = components.get("vector_store", {}).get("details", {})
         ollama_info = components.get("ollama_llm", {}).get("details", {})
+        backend_name = ollama_info.get("backend", "LLM")
         
         with st.expander("📊 Vector Store Details", expanded=True):
             st.write(f"• **Collection:** `{vs_info.get('collection_name', 'N/A')}`")
             st.write(f"• **Chunks Stored:** `{vs_info.get('total_chunks', 0)}`")
             st.write(f"• **Embedding Model:** `{vs_info.get('model_name', 'all-MiniLM-L6-v2')}`")
 
-        with st.expander("🦙 Ollama LLM Details", expanded=False):
-            st.write(f"• **Host:** `{ollama_info.get('host', 'http://localhost:11434')}`")
-            st.write(f"• **Configured Model:** `{ollama_info.get('configured_model', 'llama3.2')}`")
-            st.write(f"• **Model Present:** `{'✅ Yes' if ollama_info.get('model_present') else '⚠️ No / Pull needed'}`")
+        with st.expander(f"✨ {backend_name} Details", expanded=False):
+            st.write(f"• **Backend:** `{ollama_info.get('backend', 'N/A')}`")
+            st.write(f"• **Configured Model:** `{ollama_info.get('configured_model', 'N/A')}`")
+            st.write(f"• **Host:** `{ollama_info.get('host', 'N/A')}`")
+            st.write(f"• **Status:** `{'✅ Connected' if ollama_info.get('model_present') else '⚠️ Not Ready'}`")
     else:
         st.error("🔴 **Backend Offline**")
         st.caption(health.get("error", "Unable to connect to FastAPI backend."))

@@ -9,7 +9,12 @@ class Settings(BaseSettings):
     Application Settings loaded from environment variables and .env file.
     """
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(
+            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), ".env"),
+            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "backend", ".env"),
+            ".env",
+            "backend/.env",
+        ),
         env_file_encoding="utf-8",
         extra="ignore"
     )
@@ -18,10 +23,17 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     LOG_LEVEL: str = "INFO"
 
-    # Ollama LLM Settings
+    # Ollama LLM Settings (kept for compatibility)
     OLLAMA_HOST: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama3.2"
     OLLAMA_TIMEOUT_SECONDS: float = 60.0
+
+    # Google Gemini API Settings
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-3.6-flash"
+
+    # llama-server (llama.cpp) OpenAI-compatible endpoint
+    LLAMA_SERVER_URL: str = "http://127.0.0.1:11434"
 
     # ChromaDB & Embeddings Settings
     CHROMA_PATH: str = "data/vector_store"
