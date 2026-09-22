@@ -139,7 +139,7 @@ rag-assistant-project/
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/<your-username>/rag-assistant-app.git
+git clone https://github.com/<amur9096>/rag-assistant-app.git
 cd rag-assistant-app
 ```
 
