@@ -1,6 +1,10 @@
 import logging
 import sys
-from backend.app.core.config import settings
+
+try:
+    from backend.app.core.config import settings
+except ImportError:
+    from app.core.config import settings
 
 
 def setup_logging():

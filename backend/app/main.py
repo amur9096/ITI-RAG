@@ -1,14 +1,32 @@
 import os
+import sys
 from contextlib import asynccontextmanager
+
+# Add parent and current paths to sys.path for seamless execution from any directory
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+BACKEND_DIR = os.path.dirname(CURRENT_DIR)
+ROOT_DIR = os.path.dirname(BACKEND_DIR)
+
+for path in [ROOT_DIR, BACKEND_DIR, CURRENT_DIR]:
+    if path not in sys.path:
+        sys.path.insert(0, path)
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.app.core.config import settings
-from backend.app.utils.logging_config import setup_logging
-from backend.app.api.routes.query import router as query_router
-from backend.app.services.retrieval import RetrievalService
-from backend.app.services.generation import GenerationService
+try:
+    from backend.app.core.config import settings
+    from backend.app.utils.logging_config import setup_logging
+    from backend.app.api.routes.query import router as query_router
+    from backend.app.services.retrieval import RetrievalService
+    from backend.app.services.generation import GenerationService
+except ImportError:
+    from app.core.config import settings
+    from app.utils.logging_config import setup_logging
+    from app.api.routes.query import router as query_router
+    from app.services.retrieval import RetrievalService
+    from app.services.generation import GenerationService
 
 # Setup application logging
 logger = setup_logging()

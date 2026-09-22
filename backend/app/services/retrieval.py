@@ -1,11 +1,18 @@
 import os
+import sys
 import logging
 from typing import List, Dict, Any, Optional
-import chromadb
-from chromadb.config import Settings as ChromaSettings
-from sentence_transformers import SentenceTransformer
-from backend.app.core.config import settings
-from backend.app.schemas.query import SourceItem
+
+try:
+    import chromadb
+    from sentence_transformers import SentenceTransformer
+    from backend.app.core.config import settings
+    from backend.app.schemas.query import SourceItem
+except ImportError:
+    import chromadb
+    from sentence_transformers import SentenceTransformer
+    from app.core.config import settings
+    from app.schemas.query import SourceItem
 
 logger = logging.getLogger(__name__)
 

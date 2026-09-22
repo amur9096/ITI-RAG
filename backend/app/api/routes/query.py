@@ -1,16 +1,41 @@
+import os
+import sys
 import time
 import logging
+
+# Ensure parent paths are in sys.path
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+APP_DIR = os.path.dirname(os.path.dirname(CURRENT_DIR))
+ROOT_DIR = os.path.dirname(APP_DIR)
+
+for path in [ROOT_DIR, APP_DIR, CURRENT_DIR]:
+    if path not in sys.path:
+        sys.path.insert(0, path)
+
 from fastapi import APIRouter, HTTPException, status
-from backend.app.schemas.query import (
-    QueryRequest,
-    QueryResponse,
-    SourceItem,
-    HealthResponse,
-    ComponentHealth
-)
-from backend.app.services.retrieval import RetrievalService
-from backend.app.services.generation import GenerationService
-from backend.app.core.config import settings
+
+try:
+    from backend.app.schemas.query import (
+        QueryRequest,
+        QueryResponse,
+        SourceItem,
+        HealthResponse,
+        ComponentHealth
+    )
+    from backend.app.services.retrieval import RetrievalService
+    from backend.app.services.generation import GenerationService
+    from backend.app.core.config import settings
+except ImportError:
+    from app.schemas.query import (
+        QueryRequest,
+        QueryResponse,
+        SourceItem,
+        HealthResponse,
+        ComponentHealth
+    )
+    from app.services.retrieval import RetrievalService
+    from app.services.generation import GenerationService
+    from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 

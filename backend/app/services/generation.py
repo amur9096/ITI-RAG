@@ -1,8 +1,12 @@
 import logging
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 import ollama
 import httpx
-from backend.app.core.config import settings
+
+try:
+    from backend.app.core.config import settings
+except ImportError:
+    from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
