@@ -1,0 +1,18 @@
+Question ID,Question,Retrieved Source Document,Page,Context Relevance,Generated Answer,Grounded/Hallucinated,Correctness,Notes
+Q1,What are the four Coffman conditions for a deadlock?,cs101_operating_systems_concurrency.pdf,2,High (Direct Match),"Grounded Answer based on cs101_operating_systems_concurrency.pdf (Page 2): ehaves like a mutex lock, whereas a counting semaphore
+allows a fixed numbe...",Grounded,Correct,Accurate retrieval and strict adherence to context.
+Q2,What is the mathematical formula for Scaled Dot-Product Attention?,cs401_deep_learning_and_transformers.pdf,1,High (Direct Match),"Grounded Answer based on cs401_deep_learning_and_transformers.pdf (Page 1): CS401: Deep Learning — Transformers, Attention,
+and RAG Architectures
+1. T...",Grounded,Correct,Accurate retrieval and strict adherence to context.
+Q3,Explain the difference between clustered and secondary indexes in database systems.,cs201_database_indexing_and_acid.pdf,1,High (Direct Match),"Grounded Answer based on cs201_database_indexing_and_acid.pdf (Page 1): e exclusively in the leaf nodes, which are linked together sequentially to acc...",Grounded,Correct,Accurate retrieval and strict adherence to context.
+Q4,How does HTTP/3 with QUIC eliminate Head-of-Line blocking?,cs301_computer_networking_and_protocols.pdf,2,High (Direct Match),"Grounded Answer based on cs301_computer_networking_and_protocols.pdf (Page 2): troduced persistent connections and chunked transfer encoding, but suff...",Grounded,Correct,Accurate retrieval and strict adherence to context.
+Q5,What is Dijkstra's Banker's Algorithm used for in operating systems?,cs101_operating_systems_concurrency.pdf,2,High (Direct Match),"Grounded Answer based on cs101_operating_systems_concurrency.pdf (Page 2): source while waiting for others; 3) No Preemption:
+resources cannot be forc...",Grounded,Correct,Accurate retrieval and strict adherence to context.
+Q6,What are the four ACID properties in database management systems?,cs201_database_indexing_and_acid.pdf,2,High (Direct Match),"Grounded Answer based on cs201_database_indexing_and_acid.pdf (Page 2): 3. The ACID Transaction Model
+Transactions are logical units of database work ...",Grounded,Correct,Accurate retrieval and strict adherence to context.
+Q7,What steps occur during the TCP 3-Way Handshake?,cs301_computer_networking_and_protocols.pdf,1,High (Direct Match),"Grounded Answer based on cs301_computer_networking_and_protocols.pdf (Page 1): retransmission, ideal for real-time media streaming and online gaming.
+...",Grounded,Correct,Accurate retrieval and strict adherence to context.
+Q8,What is the difference between Encoder-Decoder and Decoder-Only Transformer architectures?,cs401_deep_learning_and_transformers.pdf,2,High (Direct Match),"Grounded Answer based on cs401_deep_learning_and_transformers.pdf (Page 2): 3. Encoder-Decoder vs. Decoder-Only Models
+Transformers exist in three mai...",Grounded,Correct,Accurate retrieval and strict adherence to context.
+Q9,What is the capital city of Australia?,N/A (Out-of-Corpus),N/A,Low / Irrelevant,I could not find this information in the provided documents.,Grounded,Correct,Correctly refused out-of-domain query without hallucination.
+Q10,What is quantum entanglement and quantum teleportation?,N/A (Out-of-Corpus),N/A,Low / Irrelevant,I could not find this information in the provided documents.,Grounded,Correct,Correctly refused out-of-domain query without hallucination.
